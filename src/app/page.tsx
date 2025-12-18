@@ -1,4 +1,4 @@
-"use client"; // Required for hooks
+"use client";
 
 import { useState, useEffect } from 'react';
 import { AuthPage } from '@/app/components/AuthPage';
@@ -6,40 +6,56 @@ import { HRDashboard } from '@/app/components/HRDashboard';
 import { ApplicantDashboard } from '@/app/components/ApplicantDashboard';
 import { Toaster } from 'sonner';
 
+// 1. Define a proper User interface to fix 'any' errors
+interface UserMetadata {
+  role?: 'hr' | 'applicant';
+}
+
+interface User {
+  id: string;
+  email?: string;
+  user_metadata?: UserMetadata;
+}
+
 export default function Page() {
-  const [user, setUser] = useState<any>(null);
-  const [accessToken, setAccessToken] = useState<string>('');
+  // 2. Initialize with null/empty strings correctly
+  const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
-    // Check for existing session in localStorage
+    // 3. This only runs on the client, preventing "localStorage is not defined" errors
     const savedUser = localStorage.getItem('user');
     const savedToken = localStorage.getItem('accessToken');
-    
+
     if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
-      setAccessToken(savedToken);
+      try {
+        setUser(JSON.parse(savedUser));
+        setAccessToken(savedToken);
+      } catch (error) {
+        console.error("Failed to parse user data", error);
+        localStorage.removeItem('user');
+      }
     }
     
     setLoading(false);
   }, []);
-  
-  const handleLogin = (userData: any, token: string) => {
+
+  const handleLogin = (userData: User, token: string) => {
     setUser(userData);
     setAccessToken(token);
-    
-    // Save to localStorage
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('accessToken', token);
   };
-  
+
   const handleLogout = () => {
     setUser(null);
-    setAccessToken('');
+    setAccessToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('accessToken');
   };
-  
+
+  // 4. Handle the Loading State properly
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
@@ -50,8 +66,8 @@ export default function Page() {
       </div>
     );
   }
-  
-  // Not authenticated - show login/register
+
+  // 5. Check if user and token actually exist
   if (!user || !accessToken) {
     return (
       <>
@@ -60,10 +76,9 @@ export default function Page() {
       </>
     );
   }
-  
-  // Authenticated - show appropriate dashboard based on role
+
   const userRole = user.user_metadata?.role || 'applicant';
-  
+
   return (
     <>
       {userRole === 'hr' ? (
